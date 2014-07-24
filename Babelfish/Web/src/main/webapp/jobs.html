@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Babelfish Web Viewer</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <link rel="stylesheet" type="text/css" href="inc/jquery-ui.css" />
+  <link rel="stylesheet" type="text/css" href="inc/global.css" />
+  <link rel="stylesheet" type="text/css" href="inc/bootstrap.min.css"/>
+  <link rel="stylesheet" type="text/css" href="inc/table.css"/>
+  <script src="inc/jquery.js"></script>
+  <script src="inc/jquery-ui.js"></script>
+  <script src="inc/jsrender.js"></script>
+  <script src="inc/jquery.dataTables.min.js"></script>
+  <script src="inc/templates.js"></script>
+  <script src="inc/underscore.js"></script>
+  <script src="inc/global.js"></script>
+  <script>
+    /*global $,setup,timeify,refresh*/
+    'use strict';
+    function loadJobs() {
+      $.ajax({
+        url: 'bf/jobs/list',
+        dataType: 'json',
+        success: function (data) {
+          var content = $('#content');
+          if (data.length === 0) {
+            content.html('<p>No running jobs<\/p>');
+          } else {
+            var jobs =  _.groupBy(data, function (d) { return d.resultType !== "Error"; });
+            var successfulJobs = jobs[true], failedJobs = jobs[false];
+            var successString, failString;
+            if (successfulJobs !== undefined) {
+              successString = '<h2>Successful jobs<\/h2>' + $.render.jobTemplate([successfulJobs]);
+            } else {
+              successString = '';
+            }
+            if (failedJobs !== undefined) {
+              failString = '<h2>Failed jobs<\/h2>' + $.render.failedJobTemplate([failedJobs]);
+
+            } else {
+              failString = '';
+            }
+            content.html(successString + "<br>" + failString);
+            $('#jobTable').dataTable();
+            $('#failedJobTable').dataTable();
+
+            timeify();
+            content.find('td.query').html(function (idx, old) {
+              var split = old.split('#'), r = split[0], q = split[1];
+
+              return '<a href="index.html?r=' + r + '">' + q + '<\/a>';
+            });
+          }
+        }
+      });
+    }
+
+    $(function () {
+      setup();
+      loadJobs();
+      refresh(loadJobs);
+    });
+
+    function cancelJob(id) {
+      $.ajax({
+        url: 'bf/jobs/cancel/' + id,
+        type: 'DELETE',
+        complete: function () {
+          $('#job' + id).remove();
+        }
+      });
+      return false;
+
+    }
+
+    function getAllSuccJobIds() {
+         var idArray = [];
+         $("#jobTable tr").each(function (index) {
+         // skip first row (header)
+         if (index == 0) {return true;}
+              idArray.push($(this).attr('id').replace(/^job/,''));
+         })
+         return idArray;
+     }
+
+     function getAllFailedJobIds() {
+        var idArray = [];
+        $("#failedJobTable tr").each(function (index) {
+            // skip first row (header)
+            if (index == 0) {return true;}
+            idArray.push($(this).attr('id').replace(/^job/,''));
+            })
+        return idArray;
+       }
+
+
+    function cancelMultipleJobs(idArray) {
+        for (var i=0; i < idArray.length;i++)
+        {
+              cancelJob(idArray[i]);
+        }
+
+    }
+  </script>
+</head>
+<body>
+<header id="header"></header>
+<p><input type="checkbox" id="autoRefresh" onchange="refresh(loadJobs);"/> Auto-Refresh <button onclick="cancelMultipleJobs(getAllSuccJobIds())">
+    Delete all successful Jobs</button><button onclick="cancelMultipleJobs(getAllFailedJobIds())">Delete all failed Jobs</button></p>
+<div id="content" style="width: 70%;"></div>
+</body>
+</html>

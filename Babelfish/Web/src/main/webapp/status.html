@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Babelfish Web Viewer</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <link rel="stylesheet" type="text/css" href="inc/jquery-ui.css" />
+  <link rel="stylesheet" type="text/css" href="inc/global.css" />
+  <link rel="stylesheet" type="text/css" href="inc/bootstrap.min.css"/>
+  <script src="inc/jquery.js"></script>
+  <script src="inc/jquery-ui.js"></script>
+  <script src="inc/jsrender.js"></script>
+  <script src="inc/templates.js"></script>
+  <script src="inc/global.js"></script>
+  <script src="inc/tableSorter.js"></script>
+  <script>
+    /*global $,setup,refresh*/
+    'use strict';
+
+    function loadStatus() {
+      $.ajax({
+        url: 'bf/status',
+        dataType: 'json',
+        success: function (data) { $('#status').html($.render.statusTemplate([data])); }
+      });
+    }
+
+    // as we have to sort the table after rendering due to how it's built
+    function sortTable(table, col, reverse) {
+        var tb = table, // use `<tbody>` to ignore `<thead>` and `<tfoot>` rows
+            tr = Array.prototype.slice.call(tb.rows, 0), // put rows into array
+            i;
+        reverse = -((+reverse) || -1);
+        tr = tr.sort(function (a, b) { // sort rows
+            return reverse // `-1 *` if want opposite order
+                * (a.cells[col].textContent.trim() // using `.textContent.trim()` for test
+                    .localeCompare(b.cells[col].textContent.trim())
+                   );
+        });
+        for(i = 0; i < tr.length; ++i) tb.appendChild(tr[i]); // append each row in order
+    }
+
+    function loadStatistics() {
+      $('#statistics').text("Calculating...");
+      $.ajax({
+        url: 'bf/status/statistics',
+        dataType: 'json',
+        success: function (data) { $('#statistics').html($.render.statisticsTemplate([data])); 
+                                     sortTable(document.getElementById('nodesTable').tBodies[0], 0, false);
+                                    sortTable(document.getElementById('edgesTable').tBodies[0], 0, false);
+                                }
+      });
+    }
+    $(function () {
+      setup();
+      loadStatus();
+    });
+  </script>
+</head>
+<body>
+<header id="header"></header>
+<div id="status"></div>
+<h2>Babelfish</h2>
+<div id="statistics">
+  <button onclick="loadStatistics()">Calculate Statistics</button>
+</div>
+</body>
+</html>

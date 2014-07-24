@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Babelfish Web Viewer</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <link rel="stylesheet" type="text/css" href="inc/jquery-ui.css"/>
+  <link rel="stylesheet" type="text/css" href="inc/global.css"/>
+    <link rel="stylesheet" type="text/css" href="inc/bootstrap.min.css"/>
+  <script src="inc/jquery.js"></script>
+  <script src="inc/jquery-ui.js"></script>
+  <script src="inc/jsrender.js"></script>
+  <script src="inc/templates.js"></script>
+  <script src="inc/global.js"></script>
+  <script>
+    var from = -1, num = 30, count = 0;
+    var url = function () {
+      return 'bf/log/' + from + '-' + (from + num);
+    };
+    /*globals $,setup,timeify,refresh*/
+    'use strict';
+    function prev(skip) {
+      if (typeof(skip) === 'undefined') {
+        skip = num;
+      }
+      from = Math.max(from - skip, 0);
+      loadLog();
+    }
+    function next(skip) {
+      if (typeof(skip) === 'undefined') {
+        skip = num;
+      }
+      from += skip;
+      loadLog();
+    }
+    function more() {
+      num += 10;
+      if(from+num > count) {
+        from -= from+num-count
+      }
+      loadLog();
+    }
+    function less() {
+      num = Math.max(num - 10, 0);
+      loadLog();
+    }
+    function showAll() {
+      from = 0;
+      num = Number.MAX_VALUE;
+      url = function () {
+        return 'bf/log';
+      };
+      loadLog();
+    }
+    function loadLog() {
+      $.ajax({
+        url: 'bf/log/count',
+        contentType: 'application/json',
+        success: function (data) {
+          var controls = $('#controls');
+          count = data;
+          if (from == -1) {
+            from = count - num;
+          }
+          $.ajax({
+            url: url(),
+            contentType: 'application/json',
+            success: function (data) {
+              $('#content').html($.render.logTemplate([data.reverse()]));
+              timeify();
+            }
+          });
+          controls.empty();
+          if (from > 0) {
+            if (from > 10 * num) {
+              controls.append('<input type="button" onclick="prev(10*num);" value="&lt;&lt; (' + Math.max(from - (10 * num), 0) + '-' + (from - (9 * num)) + ')"/>');
+            }
+            controls.append('<input type="button" onclick="prev();" value="&lt; (' + Math.max(from - num, 0) + '-' + from + ')"/>');
+          }
+          if (from > 0 || from + num < count) {
+            controls.append('<input type="button" onclick="showAll();" value="Show all ' + count + '"/>');
+            controls.append('<input type="button" onclick="more();" value="More (' + (num + 10) + ')"/>');
+            if (num > 10) {
+              controls.append('<input type="button" onclick="less();" value="Less (' + (num - 10) + ')"/>');
+            }
+          }
+          if (from + num < count) {
+            controls.append('<input type="button" onclick="next();" value="(' + (from + num) + '-' + Math.min(from + 2 * num, count) + ') &gt;"/>');
+            if (from + 10 * num < count) {
+              controls.append('<input type="button" onclick="next(10*num);" value="(' + (from + 10 * num) + '-' + Math.min(from + 11 * num, count) + ') &gt;&gt;"/>');
+            }
+          }
+        }
+      });
+    }
+    $(function () {
+      setup();
+      loadLog();
+      refresh(loadLog);
+    });
+  </script>
+</head>
+<body>
+<header id="header"></header>
+<p><input type="checkbox" id="autoRefresh" onchange="refresh(loadLog);"/> Auto-Refresh</p>
+<div id="controls"></div>
+<div id="content"></div>
+</body>
+</html>

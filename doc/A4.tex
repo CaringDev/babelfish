@@ -1,0 +1,183 @@
+% !TeX root = Babelfish.tex
+% !TEX program = XeLaTeXmk
+\documentclass[paper=a4,titlepage,english]{scrreprt}
+\usepackage[olines,footsepline]{scrpage2}
+\usepackage{scrhack}
+\usepackage{amssymb} % before fontspec
+\usepackage{xcolor,graphicx}
+\usepackage{fontspec}
+\usepackage{xltxtra}
+\defaultfontfeatures{Mapping=tex-text}
+%\setmonofont[Scale=1.02]{Consolas}
+%\setmainfont{Georgia}
+%\setsansfont{Univers LT 45 Light}
+\usepackage{babel}
+\usepackage{draftwatermark}
+\SetWatermarkLightness{0.9}
+\usepackage[marginal]{footmisc}
+\usepackage{booktabs}
+\usepackage{abstract}
+\usepackage{tabularx}
+\usepackage[rounded]{syntax}
+\usepackage{float}
+\usepackage{enumerate}
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{3}
+\usepackage[final]{listings}
+\usepackage[footnotesize,format=hang,justification=centering,singlelinecheck=off,nooneline]{caption}
+\DeclareCaptionLabelFormat{continued}{#1~#2~(cont.)}
+\captionsetup[ContinuedFloat]{labelformat=continued}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,positioning}
+
+\usepackage[tikz]{bclogo}
+\makeatletter
+\@namedef{Gin@rule@.mps}#1{{eps}{.mps}{#1}}
+\def\Gin@extensions{.pdf,.eps,.ps,.png,.jpg,.bmp,.pict,.tif,.psd,.mac,.sga,.tga,.gif,.mps}
+\makeatother
+\newcommand{\detail}[2][]{\begin{bclogo}[logo=\bcloupe, couleurBarre=gray,noborder=true,sousTitre={#1}]{Detail}#2\end{bclogo}}
+\newcommand{\info}[2][]{\begin{bclogo}[logo=\bcinfo, couleurBarre=yellow,noborder=true,sousTitre={#1}]{Info}#2\end{bclogo}}
+\newcommand{\att}[2][]{\begin{bclogo}[logo=\bcattention, couleurBarre=orange,noborder=true,sousTitre={#1}]{Warning}#2\end{bclogo}}
+\newcommand{\warn}[2][]{\begin{bclogo}[logo=\bcdanger, couleurBarre=red,noborder=true,sousTitre={#1}]{Danger}#2\end{bclogo}}
+
+\lstdefinelanguage{scala}{
+  morekeywords={abstract,case,catch,class,def,
+    do,else,extends,false,final,finally,
+    for,if,implicit,import,match,mixin,
+    new,null,object,override,package,
+    private,protected,requires,return,sealed,
+    super,this,throw,trait,true,try,
+    type,val,var,while,with,yield},
+  otherkeywords={=>,<-,<\%,<:,>:,\#,@},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[n]{/*}{*/},
+  morestring=[b]",
+%  morestring=[b]',
+  morestring=[b]"""
+}
+\lstset{
+  captionpos=b,
+  columns=fullflexible,
+  showspaces=false,
+  showstringspaces=false,
+  keepspaces,
+  upquote=true,
+  language=scala,
+  basicstyle=\small\ttfamily,
+  literate={~}{$\sim$}{1},
+  backgroundcolor=\color{black!20}
+}
+\usepackage[
+	unicode,
+	pdfencoding=auto,
+	pdftitle={Babelfish - A Graph-Based Data Warehouse},
+	pdfauthor={Raphael Schweizer, Daniel Kröni, Remo Gisi},
+	pdfsubject={Babelfish - Technical Documentation},
+	pdfcreator={XeLaTeX},
+%	pdfpagemode=FullScreen,
+	colorlinks=true,
+	linkcolor=black,
+	hyperindex=true,
+	urlcolor=black,
+	citecolor=black,
+	pdfdisplaydoctitle=true,
+	pdfkeywords={}
+	]{hyperref}
+
+% glossaries options: section=section,numberedsection=nolabel,numberline
+\usepackage[toc,acronym,nonumberlist,nolong,nosuper,notree,xindy]{glossaries} % load after hyperref
+\renewcommand{\glspostdescription}{} % no '.' after description
+
+\newcommand{\todo}[1][]{\textcolor{red}{\textbf{TODO} #1}}
+\newcommand{\tbd}[1][]{\textcolor{red}{\textbf{TBD} #1}}
+\newcommand\code[1]{\texttt{\hyphenchar\font45\relax #1}} %45 for -, 46 for .
+\newcommand\abs[1]{\left|#1\right|}
+\newcommand\norm[2]{\left\|#2\right\|_#1}
+\usepackage{xparse}
+\NewDocumentCommand\sbs{O{0.4}O{0.4}mm}{\begin{minipage}{#1\linewidth}#3\end{minipage}\hfill\begin{minipage}{#2\linewidth}#4\end{minipage}}
+
+\newcommand{\fhnw}{\includegraphics{FHNW}}
+\newcommand{\texttth}[1]{\texttt{\hyphenchar\font45\relax #1}}
+\newcommand{\frontmatter}{
+	\clearpage
+	\pagenumbering{roman}
+	\refoot[]{\vspace{-1em}\normalfont\pagemark}
+	\rofoot[]{\vspace{-1em}\normalfont\pagemark}
+}
+\newcommand{\mainmatter}{
+ \clearpage
+ \pagenumbering{arabic}
+ \refoot[]{\vspace{-1em}\normalfont\pagemark}
+ \rofoot[]{\vspace{-1em}\normalfont\pagemark}
+}
+\newcommand{\backmatter}{
+ \clearpage
+ \pagenumbering{Roman}
+}
+
+\usepackage{chngcntr}
+\counterwithout{footnote}{chapter}
+\usepackage{cleveref}
+
+\setlength{\parindent}{0em}
+\setlength{\parskip}{0.2\baselineskip}
+\setlength{\topmargin}{-24mm}
+\setlength{\topskip}{6mm}
+\setlength{\footskip}{1cm}
+\setlength{\skip\footins}{8mm}
+\setlength{\footnotemargin}{0em}
+%\setlength{\footnotesep}{0.3cm}
+\setlength{\evensidemargin}{+3.6mm} % rel. to 1-inch / 2.54cm default
+\setlength{\oddsidemargin}{+3.6mm}
+\setlength{\textwidth}{15.2cm}
+\setlength{\textheight}{24.5cm}
+\setlength{\headheight}{2cm}
+\setlength{\abovecaptionskip}{0.3cm}
+
+\pagestyle{scrheadings}
+% normal pagestyle also for chapter pages
+%\renewcommand*{\chapterpagestyle}{scrheadings}
+%\renewcommand*{\chapterheadstartvskip}{\vspace*{-\topskip}}
+\setheadwidth[-7mm]{text}
+\lohead[\fhnw]{\fhnw}
+\lehead[\fhnw]{\fhnw}
+\rohead{}
+\rehead{}
+\chead{}
+
+\lefoot[]{\vspace{-1em}\normalfont Babelfish}
+\lofoot[]{\vspace{-1em}\normalfont Babelfish}
+\refoot[]{\vspace{-1em}\normalfont\pagemark}
+\rofoot[]{\vspace{-1em}\normalfont\pagemark}
+\cfoot[]{\vspace{-1em}\normalfont Documentation}
+
+\makeatletter
+\def\maketitle{
+ \thispagestyle{plain}
+ \pagenumbering{Alph}
+ \null
+ \vfill
+ {\noindent \Huge \sffamily \textbf \@title\par}
+ \vspace{1cm}
+ {\noindent \LARGE \sffamily \textbf \@subtitle\par}
+ \vspace{1cm}
+ {\noindent \@date}
+ \vfill
+ \begin{table}[H]
+  \begin{tabular}{ll}
+Authors:        & Daniel Kröni, Remo Gisi, Raphael Schweizer\\
+ & Institute of Mobile and Distributed Systems\\
+ & University of Applied Sciences and Arts, Northwestern Switzerland\\
+  \end{tabular}
+ \end{table}
+ \null
+ \cleardoublepage
+}
+\def\subtitle#1{\def\@subtitle{#1}}
+\bibliographystyle{mod-alpha}
+\makeatother
+%\makeindex
+\loadglsentries{Glossary}
+\makeglossaries
+\date{\today}

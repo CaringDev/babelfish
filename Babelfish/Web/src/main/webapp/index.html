@@ -1,0 +1,390 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Babelfish Web Viewer</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<link rel="stylesheet" type="text/css" href="inc/jquery-ui.css" />
+<link rel="stylesheet" type="text/css" href="inc/global.css"/>
+<link rel="stylesheet" type="text/css" href="inc/d3.css"/>
+<link rel="stylesheet" type="text/css" href="inc/table.css"/>
+<link rel="stylesheet" type="text/css" href="inc/bootstrap.min.css"/>
+<script src="inc/d3.v3.js"></script>
+<script src="inc/jquery.js"></script>
+<script src="inc/jquery-ui.js"></script>
+<script src="inc/jquery.dataTables.min.js"></script>
+<script src="inc/jsrender.js"></script>
+<script src="inc/templates.js"></script>
+<script src="inc/purl.js"></script>
+<script src="inc/global.js"></script>
+<script src="inc/underscore.js"></script>
+<script src="d3Tree.js"></script>
+<script src="paths.js"></script>    
+<script src="inc/ace/ace.js"></script>
+
+<script>
+/*globals $,setup,formatTrees,getLocalValue,setLocalValue*/
+'use strict';
+
+var editor;
+
+$(function () {
+    setup();
+    $('#noScript').hide();
+    $('#queryForm').show();
+    //Invoke Dialog but close it at first, only appear onclick of node
+    $( "#info" ).dialog({ autoOpen: false, title: "Node Info", width: "auto"});
+    // setup ACE Editor
+    editor = ace.edit("editor");
+    editor.setTheme("ace/theme/clouds");
+    editor.getSession().setMode("ace/mode/scala");
+
+    var textarea = $('textarea#queryText');
+    editor.setValue(textarea.val());
+
+    //sync content between textarea and ace editor-field
+    editor.getSession().on('change', function () {
+        textarea.val(editor.getSession().getValue());
+    });
+
+    textarea.on('propertychange', function () {
+        editor.getSession().setValue(textarea.val())
+    });
+
+    textarea.on('change', function () {
+        editor.getSession().setValue(textarea.val())
+    });
+
+});
+
+// 'Constants'
+var TXT_CANCELLED = 'Cancelled';
+var EDGE_KIND = "EDGE";
+var NODE_KIND = "NODE";
+
+var queryResult = ""; // cache for JSON result from server
+
+var elementCache = {};
+var pathCache = [];
+
+var edgeCache = {}; // for edges in the tree representation
+var treeDataCache = [];
+
+
+function clearMetaInfo() {
+    elementCache = {};
+    pathCache = [];
+    edgeCache = {};
+    treeDataCache = [];
+}
+
+function working(id) {
+    $('#querySubmit').prop('disabled', true);
+    if (id) {
+        $("#querySubmit").after('<input value="Cancel" type="button" name="Cancel" id="queryCancel" onclick="cancelJob(' + id + ')"/>');
+    }
+}
+
+function ready() {
+    $('#querySubmit').prop('disabled', false);
+    $('#queryCancel').remove();
+    $("html").removeClass('busy');
+}
+
+function cancelJob(id) {
+    $.ajax({
+        url: 'bf/jobs/cancel/' + id,
+        type: 'DELETE',
+        statusCode: {
+            200: function () {
+                $('#queryResult').text(TXT_CANCELLED);
+                ready();
+            }
+        }
+    });
+}
+
+function showNodeInfo(id) {
+    $.getJSON('bf/nodes/' + id, function (node) {
+    //  Sort node.properties
+    for (var name in node.properties) {
+	    var property = node.properties[name];
+        sortJsonArrayByProp(node.properties[name], "version.from"); // sort all properties by version.from attribute
+        for (var index in property){                                // change Scalas Max Int Value to Current String
+                                                                    // I made this change here to have a clean seperation
+                                                                    // of strict typing in scala (keeping it clean)
+                                                                    // as opposed to javascript where this handling 
+                                                                    // can be made more lazily (keep the JSON parsable for Strict Lang's)
+	        if (property[index].version.to == 2147483647) { property[index].version.to = "Current"; }
+            }
+
+    }
+    $('#info').html($.render.nodeTemplate(node));
+	$("#info").dialog( "open" );
+    });
+}
+
+function buildNodeInfo(id) {
+    if (elementCache.hasOwnProperty(id)) {
+        var node = elementCache[id],
+            idProps = [],
+            prop;
+        for (prop in node.idProperties) {
+            if (node.idProperties.hasOwnProperty(prop)) {
+                idProps.push(node.idProperties[prop]);
+            }
+        }
+        return '<a class="nodeInfo" href="#"' +
+            'onclick="showNodeInfo(' + id + '); return false;" ' +
+            'title="' + idProps + '">' +
+            node.nodeType +
+            '<\/a>';
+    } else {
+        return "Error - cannot find element " + id + " in cache. (Check cache handling?)";
+    }
+}
+
+function showEdgeInfo(id) {
+    $.getJSON('bf/edges/' + id, function (edge) {
+        $('#info').html($.render.edgeTemplate(edge));
+    });
+}
+
+
+function buildEdgeInfo(id) {
+    var edgeRep = parseInt(id) > 0 ? '&rarr;' : '&larr;';
+    return '<a class="edgeInfo" href="#" ' +
+        'onclick="showEdgeInfo(' + id + '); return false;" ' +
+        'title="Edge#' + id + '">' +
+        edgeRep +
+        '<\/a>';
+}
+
+function extractElements() {
+    var elements = {};
+    _.forEach(queryResult.elementInfo, function (element) {
+        if (element.hasOwnProperty("nodeType")) { // a node
+            var key = element.nodeId;
+            elements[key] = {
+                id: key,
+                kind: NODE_KIND,
+                nodeType: element.nodeType,
+                idProperties: element.idProperties
+            };
+        } else { // an edge
+            key = element.edgeId;
+            elements[key] = {
+                id: key,
+                kind: EDGE_KIND,
+                edgeType: element.edgeType
+            };
+        }
+    });
+    return elements;
+}
+
+function extractPaths() {
+    return _.map(queryResult.paths, function (path, index) {
+        return _.map(path, function (id) {
+            //TODO: Lookup if id is labeled as a variable and somehow present this information
+            return id;
+        });
+    });
+}
+
+function extractAndCacheQueryResult() {
+    // if the cache is empty, we need to fill it first
+    if (pathCache.length === 0) {
+        elementCache = extractElements();
+        pathCache = extractPaths();
+    }
+    // otherwise we're good (trust me).
+}
+
+function formatGraph(layout) {
+    var id = Number($.url().param('r'));
+    return '<div>' +
+        '<object style="max-width: 200%" data="bf/jobs/results/' + id + '.xml?layout=' + layout + '&titled=false&noCache=' + new Date().getTime() + '" type="image/svg+xml"><\/object><br/>' +
+        '<input type="button" value="Download" onclick="downloadDialog(' + id + ')"/> ' +
+        '<\/div>';
+}
+
+function formatResult(formatParam) {
+    if ($('#queryResult').text() === TXT_CANCELLED) {
+        return TXT_CANCELLED;
+    }
+    switch (queryResult.resultType) {
+    case "Paths":
+        $('#displayType').show();
+        switch (formatParam) {
+        case "tree":
+            extractAndCacheQueryResult();
+            return formatTrees();
+        case "graph_dot":
+            return formatGraph("dot");
+        case "graph_sfdp":
+            return formatGraph("sfdp");
+        case "list":
+            extractAndCacheQueryResult();
+            return formatPaths();
+        default:
+            return "Unknown visualization type";
+        }
+    case "Table":
+        return $.render.tableTemplate(queryResult) +
+            '<br/><a href="bf/jobs/results/' + Number($.url().param('r')) + '.csv"><img height="20px" src="inc/images/CSV.png"/><\/a>';
+
+    case "Error":
+        return '<pre class="ERROR">' + queryResult.message + '<\/pre>';
+    default:
+        return "No visualization for " + queryResult.resultType;
+    }
+}
+
+function setDisplayType(type) {
+    var timings = $.render.timingsTemplate(queryResult);
+    $('#queryResult').empty().html(formatResult(type)).append(timings);
+}
+
+function submitQuery(query) {
+    working();
+    var oldHistory = getLocalValue("history");
+    if (!$.isArray(oldHistory)) {
+        oldHistory = [];
+    }
+    var idx = $.inArray(query, oldHistory);
+    if (idx !== -1) {
+        oldHistory.splice(idx, 1);
+    }
+    oldHistory.unshift(query);
+    setLocalValue("history", oldHistory);
+    // encode query string, decode slashes
+    var qURL = encodeURIComponent(query).replace(new RegExp("%2F", 'g'), "/");
+    $.getJSON('bf/jobs/execute/' + qURL, function (id) {
+        working(id);
+        window.location = '?r=' + id;
+    });
+}
+
+function buildHistory() {
+    var history = getLocalValue("history"),
+        historySelect = $('#history');
+    historySelect.html($('<option value="" style="color: #d3d3d3;">History<\/option>'));
+    if ($.isArray(history)) {
+        _.forEach(history, function (v) {
+            historySelect.append($('<option><\/option>').val(v).text(v));
+        });
+    }
+}
+
+$(function () {
+    var id = Number($.url().param('r'));
+    if (isFinite(id)) {
+        working(id);
+        $.ajax({
+            url: 'bf/jobs/list/' + id,
+            contentType: "application/json",
+            success: function (data) {
+                $('#queryText').val(data.query);
+                editor.setValue(data.query,-1)
+            }
+        });
+        $.ajax({
+            url: 'bf/jobs/results/' + id,
+            contentType: "application/json",
+            statusCode: {
+                200: function (res) {
+                    $('#queryCancel').prop('disabled', true).val('formatting...');
+                    setTimeout(function () {
+                        queryResult = res;
+                        clearMetaInfo();
+                        var timings = $.render.timingsTemplate(queryResult);
+                        $('#queryResult').html(formatResult($('#displayType option:selected').val())).append(timings);
+                        $('#queryResultTable').dataTable({"aaSorting":[]});
+                        ready();
+                    }, 1);
+                },
+                204: function () {
+                    $('#queryResult').text('Error');
+                    ready();
+                }
+            }
+        });
+    } else {
+        var history = getLocalValue("history");
+        if ($.isArray(history)) {
+            $('#queryText').val(history[0]);
+            editor.setValue(history[0],-1);
+        }
+    }
+
+    buildHistory();
+    $('#history').change(function () {
+        $("#history option:selected").each(function () {
+            var selected = $(this).val();
+            if (selected !== "") {
+                $('#queryText').val(selected);
+                editor.setValue(selected,-1);
+            }
+        });
+    });
+    $('#historyClear').click(function () {
+        if (window.confirm("Do you want to delete the history?")) {
+            setLocalValue("history", []);
+            buildHistory();
+        }
+    });
+    $('#historyRemove').click(function () {
+        var selectedIndex, oldHistory;
+        selectedIndex = $('#history').prop('selectedIndex');
+        oldHistory = getLocalValue("history");
+        if (selectedIndex > 0) {
+            oldHistory.splice(selectedIndex - 1, 1);
+            setLocalValue("history", oldHistory);
+            buildHistory();
+            $('#history').prop('selectedIndex', selectedIndex - 1);
+        }
+    });
+});
+
+
+</script>
+        <style type="text/css" media="screen">
+            #editor { position: absolute; width: 97%; height: 220px; }
+	    #queryText {height: 220px;}
+	    div#info table td, table th { padding-right: 10px; padding-top:4px; padding-bottom: 4px; }
+	    .ui-button-text { visibility: hidden; }
+	    .ui-widget-header { background: #cccccc;}
+        </style>
+</head>
+
+<body>
+<header id="header"></header>
+<section id="main">
+    <div id="noScript">
+        <p>This application requires JavaScript.</p>
+    </div>
+
+    <div id="editor"></div>
+    <div id="queryForm" hidden="hidden">
+        <form action="/" onsubmit="submitQuery(this.queryText.value); return false;">
+            <textarea id="queryText" type="text" name="queryText" placeholder="Enter your query here" rows="10" wrap="physical" spellcheck="false" required="required"></textarea>
+            <br/>
+            <input type="submit" id="querySubmit"/>
+            <select id="history"></select>
+            <input type="button" id="historyClear" value="Clear history"/>
+            <input type="button" id="historyRemove" value="Remove selected"/>
+            <select id="displayType" onchange="setDisplayType(this.value);" hidden="hidden">
+                <option value="tree">Tree</option>
+                <option value="graph_dot">Graph (DOT)</option>
+                <option value="graph_sfdp">Graph (SFDP)</option>
+                <option value="list" selected="selected">List</option>
+            </select>
+        </form>
+        <div id="queryResult"></div>
+        <div id="info"></div>
+    </div>
+    <div id="content"></div>
+</section>
+</body>
+</html>

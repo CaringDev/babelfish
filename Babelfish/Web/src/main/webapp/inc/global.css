@@ -1,0 +1,37 @@
+html.busy, html.busy *  { cursor: wait; }
+
+#queryText              { width: 100%; }
+
+#info                   { padding: 7px; background: rgba(255, 255, 255, 0.75); }
+
+#queryResult            { float:left;margin-top:1.5em; }
+
+#noScript               { background-color: red; font-weight: bold; }
+
+.nodeInfo               { color: inherit; text-decoration: inherit; }
+.nodeInfo:focus         { font-weight: bold; }
+
+.edgeInfo               { color: inherit; text-decoration: inherit; }
+.edgeInfo:focus         { font-weight: bold; }
+
+.ui-tooltip             { max-width: none; font-size: 90%; }
+
+body			{padding-right:45px; padding-left:20px; background-color:#F3F2F2;}
+
+td                      { border-left: #DDD }
+td:first-child          { border-left: none }
+tr:nth-child(even)      { background: #EEE }
+tr:nth-child(odd)       { background: #FFF }
+th                      { text-align: left; }
+
+.TRACE                  { background-color: rgba(0, 255, 0, 0.1) !important; }
+.DEBUG                  { background-color: rgba(0, 255, 0, 0.2) !important; }
+.INFO                   { background-color: rgba(0, 255, 0, 0.3) !important; }
+.WARN                   { background-color: rgba(255, 255, 0, 0.3) !important; }
+.ERROR                  { background-color: rgba(255, 0, 0, 0.3) !important; }
+
+nav a		        {margin-right:10px;}
+
+#queryText		{margin-bottom:10px;}
+.attrKey		{color:#003057;}
+.versionRange		{font-weight:500;}

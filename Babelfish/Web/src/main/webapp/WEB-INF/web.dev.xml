@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="3.0">
+    <context-param>
+        <param-name>dbDir</param-name>
+        <param-value>Core/src/test/resources/data/db</param-value>
+        <description>
+            Relative or absolute path to a directory containing the Babelfish databases.
+            If this directory is empty a new database will be created within the given directory.
+            IMPORTANT: if the directory lies beneath the web container (e.g. tomcat) deployment directory,
+            chances are good that ALL DATA IS DELETED on undeploy of the webapp.
+        </description>
+    </context-param>
+    <context-param>
+        <param-name>importDir</param-name>
+        <param-value>Core/src/test/resources/data/import</param-value>
+        <description>
+            Relative or absolute path to a directory to be watched for .zip files to be imported.
+            The underlying filesystem must support directory watchers (e.g. remote shares typically won't work).
+            If the directory does not exists on startup, no watcher will be created.
+        </description>
+    </context-param>
+    <context-param>
+        <param-name>AllowedRemotes</param-name>
+        <param-value>.*</param-value>
+        <description>Hosts matching this regular expression are allowed to make cross-site requests.</description>
+    </context-param>
+    <listener>
+        <listener-class>org.scalatra.servlet.ScalatraListener</listener-class>
+    </listener>
+</web-app>

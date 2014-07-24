@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Babelfish Web Viewer</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <link rel="stylesheet" type="text/css" href="inc/jquery-ui.css" />
+  <link rel="stylesheet" type="text/css" href="inc/global.css"/>
+  <link rel="stylesheet" type="text/css" href="inc/bootstrap.min.css"/>
+  <script src="inc/jquery.js"></script>
+  <script src="inc/jquery-ui.js"></script>
+  <script src="inc/jsrender.js"></script>
+  <script src="inc/templates.js"></script>
+  <script src="inc/global.js"></script>
+  <script>
+    /*globals $,d3 */
+    'use strict';
+    function createSchema() {
+      $.ajax({
+        url: 'bf/schema/graph',
+        dataType: 'json',
+        success: function (data) {
+        /* Sort Contents before outputting
+           this should be a helper function but as the whole JS thing is a mess this would need extended refactor
+        */
+
+          sortJsonArrayByProp(data.nodes, "name");
+          $.each(data.nodes, function(key) {
+                sortJsonArrayByProp(data.nodes[key].properties, "name");
+
+          })
+          $('#content').html($.render.schemaTemplate(data));
+        }
+      });
+    }
+
+    $(function () {
+      setup();
+      $.ajax({
+        url: 'bf/capabilities/dot',
+        success: function (data) {
+          if (data) {
+            $('#schema').html('<object style="width: 100%" data="bf/schema/xml?noCache=' + new Date().getTime() + '" type="image/svg+xml"><\/object>');
+            $('#schemaLinks').find('a').show();
+          } else {
+            createSchema();
+          }
+        }
+      });
+    });
+  </script>
+</head>
+<body>
+<header id="header"></header>
+<div id="schema"></div>
+<div id="schemaLinks">
+  <a href="bf/schema/pdf" hidden="hidden"><img src="inc/images/PDF.svg" height="20px"/></a>
+  <a href="bf/schema/svg" hidden="hidden"><img src="inc/images/SVG.svg" height="20px"/></a>
+  <a href="bf/schema/csv">Schema for CSV-Files</a>
+</div>
+<div id="content"><button onclick="createSchema();">Load schema</button></div>
+</body>
+</html>

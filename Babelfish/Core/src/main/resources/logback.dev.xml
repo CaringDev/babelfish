@@ -1,0 +1,25 @@
+<configuration>
+  <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator"/>
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>[%.-1level] %date{HH:mm:ss.SSS} %logger{0} - %m%n</pattern>
+    </encoder>
+  </appender>
+
+  <appender name="WEB-JSON" class="ch.qos.logback.core.read.ListAppender"/>
+
+  <!-- Own code -->
+  <logger name="ch.fhnw" level="TRACE"/>
+
+  <!-- Less verbose database -->
+  <logger name="neo4j" level="WARN"/>
+  <!-- Ignore Memory Map exception traces -->
+  <logger name="org.neo4j.kernel.impl.nioneo.store" level="ERROR" additivity="false"/>
+  <!-- Ignore JMX Bean registration timing issues -->
+  <logger name="org.neo4j.jmx.impl" level="WARN"/>
+
+  <root level="DEBUG">
+    <appender-ref ref="STDOUT"/>
+    <appender-ref ref="WEB-JSON"/>
+  </root>
+</configuration>
